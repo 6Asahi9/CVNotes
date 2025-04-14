@@ -25,20 +25,37 @@ class PoseDetector:
         if results.pose_landmarks:
             if draw:
                 self.mpDraw.draw_landmarks(img, results.pose_landmarks, self.mpPose.POSE_CONNECTIONS)
-        return img
+
+        return results.pose_landmarks
+
+    def getPosition(self, img, draw=False):
+        landmarks = self.findPose(img, draw)
+        positions = []
+        if landmarks:
+            h, w, c = img.shape
+            for id, lm in enumerate(landmarks.landmark):
+                # Convert normalized coordinates to pixel coordinates
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                positions.append((id, cx, cy))
+                # if draw:
+                #     cv2.circle(img, (cx, cy), 5, (0, 255, 0), cv2.FILLED)
+        return positions
 
 def main():
-    cap = cv2.VideoCapture('HumanMotions/MultiplePeople.mp4')
-    detector = PoseDetector()
+    cap = cv2.VideoCapture('HumanMotions/MultiplePeople.mp4')  # Replace with your video or camera source
     ptime = 0
+    detector = PoseDetector()
 
     while True:
         success, img = cap.read()
         if not success:
             break
 
-        img = detector.findPose(img)
+        positions = detector.getPosition(img, draw=True)  # Get landmark positions
+        for id, x, y in positions:
+            print(f"ID: {id}, Position: ({x}, {y})")
 
+        # Calculate FPS
         ctime = time.time()
         fps = 1 / (ctime - ptime)
         ptime = ctime
@@ -46,11 +63,7 @@ def main():
         cv2.putText(img, str(int(fps)), (70, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255, 0, 0), 3)
         cv2.imshow("Movement Tracking", img)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+        cv2.waitKey(1)
 
 if __name__ == "__main__":
     main()
